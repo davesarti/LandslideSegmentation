@@ -4,10 +4,6 @@ import sys
 import argparse
 import rasterio
 
-
-# Per eseguire 'python Controlla_dimensioni.py /pathConCartelleDeiComuni'
-# ex: python Controlla_dimensioni.py C:\Users\spert\Desktop\TESI\immagini\Dati_super_res-20250705T164910Z-1-001\Dati_super_res
-
 keywords_2m = ["agea", "cgr"]
 keywords_10m = ["Sentinel2_pre", "Sentinel2_post"]
 

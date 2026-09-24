@@ -34,8 +34,8 @@ from .evaluate import evaluate_model, seed_everything
 from .losses import DiceLoss, SquaredDiceLoss, BCEDiceLoss
 
 PATCH_SIZE = 256
-NUM_PATCHES = 1000
-BATCH_SIZE = 16
+NUM_PATCHES = 4000
+BATCH_SIZE = 24
 NUM_EPOCHS = 120
 LR = 5e-4
 SWIN_WEIGHT_DECAY = 5e-2  # WD per SwinUnet (richiesto 1e-2–1e-3)
@@ -222,6 +222,7 @@ def main():
             train_comuni,
             PATCH_SIZE,
             NUM_PATCHES,
+            augment=True,
             include_slope_ndvi=args.include_slope_ndvi,
         )
         eval_dataset = SegmentationSingleDataset(
@@ -310,7 +311,7 @@ def main():
             optimizer,
             mode="min",
             factor=0.5,
-            patience=4,
+            patience=5,
             threshold=1e-4,
             min_lr=1e-7,
         )

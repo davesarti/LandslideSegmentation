@@ -23,6 +23,7 @@ cycler==0.12.1
 dask==2025.7.0
 debugpy==1.8.16
 decorator==5.2.1
+einops==0.8.1
 docstring_parser==0.17.0
 docutils==0.21.2
 donfig==0.8.1.post1
@@ -164,4 +165,5 @@ urllib3==2.5.0
 vispy==0.15.2
 wcwidth==0.2.13
 wrapt==1.17.2
+yacs==0.1.8
 zarr==3.1.1
