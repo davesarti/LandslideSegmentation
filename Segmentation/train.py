@@ -26,15 +26,16 @@ except Exception as e:
         f"e avvia lo script dalla root del progetto. Dettagli: {e}"
     )
 
-from .unet import UNet, AttentionUNet, log_attention_stats
-from .swin_unet import SwinUnet
-from .swin_config import get_config
+from .models.unet import UNet
+from .models.attention_unet import AttentionUNet, log_attention_stats
+from .models.swin_unet import SwinUnet
+from .models.swin_config import get_config
 from .evaluate import evaluate_model, seed_everything
 from .losses import DiceLoss, SquaredDiceLoss, BCEDiceLoss
 
 PATCH_SIZE = 256
-NUM_PATCHES = 4000
-BATCH_SIZE = 32
+NUM_PATCHES = 1000
+BATCH_SIZE = 16
 NUM_EPOCHS = 120
 LR = 5e-4
 SWIN_WEIGHT_DECAY = 5e-2  # WD per SwinUnet (richiesto 1e-2–1e-3)
@@ -162,6 +163,7 @@ def seed_workers(worker_id: int) -> None:
 
 def main():
     """Funzione principale per addestrare e valutare il modello di segmentazione."""
+    base_dir = Path(__file__).resolve().parent
     # Parser argomenti CLI per selezionare il modello
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -181,6 +183,24 @@ def main():
         "--include_slope_ndvi",
         action="store_true",
         help="Includi i dati di Slope e Ndvi nel training.",
+    )
+    parser.add_argument(
+        "--weights-dir",
+        type=Path,
+        default=base_dir / "weights",
+        help="Directory in cui salvare i pesi.",
+    )
+    parser.add_argument(
+        "--metrics-dir",
+        type=Path,
+        default=base_dir / "artifacts" / "metrics",
+        help="Directory in cui salvare le metriche JSON.",
+    )
+    parser.add_argument(
+        "--plots-dir",
+        type=Path,
+        default=base_dir / "artifacts" / "plots",
+        help="Directory in cui salvare i plot del training.",
     )
     args = parser.parse_args()
     prefix = build_prefix(args.model, args.loss, args.include_slope_ndvi)
@@ -267,7 +287,7 @@ def main():
         elif args.loss == "sqdice":
             criterion = SquaredDiceLoss()
         elif args.loss == "bce_dice":
-            criterion = BCEDiceLoss(bce_weight=0.5)
+            criterion = BCEDiceLoss(bce_weight=0.7)
         else:
             raise ValueError(f"Loss non supportata: {args.loss}")
         criterion = criterion.to(device)
@@ -295,8 +315,7 @@ def main():
             min_lr=1e-7,
         )
 
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        weights_dir = os.path.join(base_dir, "weights")
+        weights_dir = args.weights_dir
         os.makedirs(weights_dir, exist_ok=True)
 
         # Allenamento
@@ -316,7 +335,7 @@ def main():
         )
 
         # Salvataggio metriche in JSON come liste per metrica
-        metrics_dir = os.path.join(base_dir, "metrics")
+        metrics_dir = args.metrics_dir
         os.makedirs(metrics_dir, exist_ok=True)
         metrics = {
             "prefix": prefix,
@@ -334,8 +353,7 @@ def main():
         print(f"Metriche salvate in {metrics_path}")
 
         # Crea cartella plots se non esistente
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        plots_dir = os.path.join(base_dir, "plots")
+        plots_dir = args.plots_dir
         os.makedirs(plots_dir, exist_ok=True)
 
         # Plot training losses

@@ -10,9 +10,12 @@ from typing import Tuple
 import sys
 from pathlib import Path
 
-from .unet import UNet, AttentionUNet
-from .swin_unet import SwinUnet
-from .swin_config import get_config
+from .models.unet import UNet
+from .models.attention_unet import AttentionUNet
+from .losses import BCEDiceLoss
+from .models.swin_unet import SwinUnet
+from .models.swin_config import get_config
+from .scripts.visuals_saver import save_matplotlib_visuals
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -29,8 +32,8 @@ MODEL_PATH = "best_model.pth"
 PATCH_SIZE = 256
 NUM_PATCHES = 1000
 BATCH_SIZE = 8
-FIXED_THRESHOLD = 0.5  # Non utilizzato per soglia variabile
-VIS_SAMPLES = 3
+FIXED_THRESHOLD = 0.38 # Non utilizzato per soglia variabile
+VIS_SAMPLES = 10
 
 
 def seed_everything(seed: int = 42):
@@ -184,7 +187,6 @@ def visualize_results(
 
     napari.run()
 
-
 def collect_eval_probs_and_labels(model, dataloader, device):
     model.eval()
     probs_list, labels_list = [], []
@@ -215,6 +217,28 @@ def build_parser():
         "--weights",
         default=MODEL_PATH,
         help="Percorso del file .pth dei pesi da caricare.",
+    )
+    p.add_argument(
+        "--save-visuals",
+        action="store_true",
+        help="Salva visualizzazioni con matplotlib al posto di aprire napari.",
+    )
+    p.add_argument(
+        "--visuals-dir",
+        default=str((Path(__file__).resolve().parent / "artifacts" / "qualitative" / "eval_samples").as_posix()),
+        help="Directory di output per i PNG delle visualizzazioni.",
+    )
+    p.add_argument(
+        "--plots-dir",
+        type=Path,
+        default=Path(__file__).resolve().parent / "artifacts" / "plots",
+        help="Directory di output per i plot delle soglie.",
+    )
+    p.add_argument(
+        "--vis-samples",
+        type=int,
+        default=VIS_SAMPLES,
+        help="Numero di patch da visualizzare/salvare.",
     )
     return p
 
@@ -256,10 +280,10 @@ def main():
     if "swin" in weights_path:
         cfg = get_config()
         model = SwinUnet(config=cfg).to(device)
-    elif "unet" in weights_path:
-        model = UNet(n_channels=n_in, n_classes=n_out).to(device)
     elif "attunet" in weights_path:
         model = AttentionUNet(n_channels=n_in, n_classes=n_out).to(device)
+    elif "unet" in weights_path:
+        model = UNet(n_channels=n_in, n_classes=n_out).to(device)
     else:
         raise ValueError(f"Architettura non supportata nel percorso pesi: {weights_path}")
 
@@ -277,7 +301,7 @@ def main():
     )
 
     # Loss coerente con training (logits) e pos_weight
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = BCEDiceLoss(bce_weight=0.7)
 
     if threshold is not None:
         print(f"Utilizzo soglia fissa: {threshold}")
@@ -299,13 +323,25 @@ def main():
         print(f"  Dice       : {val_dice:.4f}")
         print(f"  Confusion Matrix:\n{confusion_matrix}")
 
-        print("Apro visualizzazione napari...")
-        visualize_results(
-            model=model,
-            dataset=eval_dataset,
-            device=device,
-            num_samples=min(VIS_SAMPLES, len(eval_dataset)),
-        )
+        if args.save_visuals:
+            print("Salvo visualizzazioni con matplotlib...")
+            save_matplotlib_visuals(
+                model=model,
+                dataset=eval_dataset,
+                device=device,
+                out_dir=args.visuals_dir,
+                num_samples=min(args.vis_samples, len(eval_dataset)),
+                threshold=threshold,
+            )
+            print(f"PNG salvati in: {args.visuals_dir}")
+        else:
+            print("Apro visualizzazione napari...")
+            visualize_results(
+                model=model,
+                dataset=eval_dataset,
+                device=device,
+                num_samples=min(VIS_SAMPLES, len(eval_dataset)),
+            )
 
     else:
         print("Utilizzo soglia variabile.")
@@ -336,8 +372,7 @@ def main():
         print(f"Best OA : {max_oa:.4f} (Threshold: {thresholds[max_oa_index]:.2f})")
 
         # Creazione dir per plot
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        plots_dir = os.path.join(base_dir, "plots")
+        plots_dir = args.plots_dir
         os.makedirs(plots_dir, exist_ok=True)
 
         # Plot metriche
