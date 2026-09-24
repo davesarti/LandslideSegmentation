@@ -49,7 +49,7 @@ Supported municipality names are `Brisighella`, `Casola-Valsenio`,
 The files have these roles:
 
 | File | Description |
-|---|---|---|
+|---|---|
 | `Agea_2020_2m.tif` | Pre-event aerial imagery, with four RGB+NIR bands. |
 | `Cgr_2023_2m.tif` | Post-event aerial imagery, with four RGB+NIR bands. |
 | `Frane_V1_clipped.tif` | Reference landslide inventory. Values greater than zero are converted to the binary target mask. |
