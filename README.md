@@ -53,8 +53,8 @@ The files have these roles:
 | `Agea_2020_2m.tif` | Pre-event aerial imagery, with four RGB+NIR bands. |
 | `Cgr_2023_2m.tif` | Post-event aerial imagery, with four RGB+NIR bands. |
 | `Frane_V1_clipped.tif` | Reference landslide inventory. Values greater than zero are converted to the binary target mask. |
-| `Agea_NDVI_2020_2m.tif` | NDVI derived from the pre-event AGEA imagery. |
-| `Cgr_NDVI_2023_2m.tif` | NDVI derived from the post-event Cgr imagery. |
+| `Agea_NDVI_2020_2m.tif` | NDVI derived from the pre-event imagery. |
+| `Cgr_NDVI_2023_2m.tif` | NDVI derived from the post-event imagery. |
 | `Change_NDVI_ortho_2m.tif` | NDVI change map computed from the two orthophotos. |
 | `Change_NDVI_S2_2m.tif` | NDVI change map derived from Sentinel-2 data. |
 | `Slope_2m.tif` | Slope derived from elevation data, expressed in degrees. |
@@ -124,16 +124,14 @@ U-Net and Attention U-Net and `5e-2` for Swin U-Net. A
 validation-loss epochs. Training stops after 15 epochs without IoU
 improvement, but only after epoch 30, with a maximum of 120 epochs.
 
-`bce_dice` is calculated as `0.7 * BCE + 0.3 * Dice`. The best checkpoint is
+`bce_dice` is calculated in its best configuration as `0.7 * BCE + 0.3 * Dice`. The best checkpoint is
 selected by validation IoU and contains only the model `state_dict`.
 
 ### Models
 
 - **U-Net**: convolutional encoder-decoder with skip connections.
 - **Attention U-Net**: U-Net with attention gates on the skip connections.
-- **Swin U-Net**: hierarchical Swin Transformer encoder-decoder. Its checked-in
-	configuration expects eight input channels and a `256x256` image, so extended
-	channel stacks may require a corresponding model/configuration change.
+- **Swin U-Net**: hierarchical Swin Transformer encoder-decoder.
 
 ## Evaluation
 
@@ -189,11 +187,6 @@ that flag, the evaluator opens an interactive napari viewer.
 The root-level utilities are shared by the segmentation and super-resolution
 experiments:
 
-```bash
-python dimensions_check.py Comuni --output raster_coherence.csv
-python view_dataset.py
-```
-
 - `data_utils.py` loads and normalizes GeoTIFFs, creates the valid-area mask,
 	samples aligned patches, applies optional augmentation and exposes the
 	segmentation/super-resolution dataset classes.
@@ -218,7 +211,6 @@ the best IoU reported for each architecture.
 
 ### Loss-weight and architecture comparison
 
-
 | Architecture | λ | Mean Loss | Accuracy | IoU | Threshold |
 |---|---|---|---|---|---|
 | **U-Net** | 1.0 | 0.0812 | 0.9717 | 0.5574 | 0.48 |
@@ -233,7 +225,6 @@ the best IoU reported for each architecture.
 | **Swin U-Net** | 0.7 | 0.1893 | 0.9696 | 0.5271 | 0.44 |
 | **Swin U-Net** | 0.5 | 0.1953 | 0.9684 | 0.5173 | 0.42 |
 | **Swin U-Net** | 0.3 | 0.2199 | 0.9686 | 0.5120 | 0.48 |
-
 
 | Model | Optimal λ | Parameters | TP | FP | TN | FN | Accuracy | IoU |
 |---|---|---|---|---|---|---|---|---|
